@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Daerah{% endblock %}
+
+{% block content %}
+    <h2 class="text-2xl font-semibold mb-4">Daerah List</h2>
+    
+    <table class="border-collapse border w-full">
+        <thead>
+            <tr class="bg-gray-200">
+                <th class="border p-2">#</th>
+                <th class="border p-2">Name</th>
+                <th class="border p-2">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for daerah in daerah_list %}
+                <tr class="bg-gray-100">
+                    <td class="border p-2">{{ loop.index }}</td>
+                    <td class="border p-2">{{ daerah.name }}</td>
+                    <td class="border p-2">
+                        <a href="#" class="text-blue-500 hover:underline edit-btn" data-id="{{ daerah.id }}">Edit</a>
+                        <a href="{{ url_for('delete_daerah', id=daerah.id) }}" class="text-red-500 hover:underline ml-2">Delete</a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <!-- Edit Daerah Modal -->
+    <div id="editModal" class="hidden fixed inset-0 bg-gray-700 bg-opacity-75 flex items-center justify-center">
+        <!-- Modal content goes here -->
+    </div>
+    
+    <div class="mt-8">
+        <h2 class="text-2xl font-semibold mb-4">Create New Daerah</h2>
+        
+        <form method="post" action="{{ url_for('create_daerah') }}" class="space-y-4">
+            <div class="flex items-center mb-4">
+                <label class="w-24">Name:</label>
+                <input type="text" name="name" class="border rounded p-1 w-64" placeholder="Enter daerah name" required>
+            </div>
+            
+            <button class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600" type="submit">Create Daerah</button>
+        </form>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const daerahList = {{ daerah_list | tojson }};
+    
+    const editButtons = document.querySelectorAll('.edit-btn');
+    const editModal = document.getElementById('editModal');
+    const closeModal = document.getElementById('closeModal');
+    const editForm = document.getElementById('editForm');
+    const editDaerahId = document.getElementById('editDaerahId');
+    
+    editButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const daerahId = button.getAttribute('data-id');
+            const daerah = daerahList.find(d => d.id === parseInt(daerahId));
+            
+            editDaerahId.value = daerahId;
+            editModal.classList.remove('hidden');
+        });
+    });
+    
+    closeModal.addEventListener('click', () => {
+        editModal.classList.add('hidden');
+    });
+</script>
+{% endblock %}

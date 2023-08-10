@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Accounts{% endblock %}
+
+{% block content %}
+    <h2 class="text-2xl font-semibold mb-4">Account Management</h2>
+    
+    <div class="flex items-center mb-4">
+        <label class="w-24">Username:</label>
+        <input type="text" class="border rounded p-1 w-64" placeholder="Enter username">
+    </div>
+    
+    <div class="flex items-center mb-4">
+        <label class="w-24">Password:</label>
+        <input type="password" class="border rounded p-1 w-64" placeholder="Enter password">
+    </div>
+    
+    <div class="flex items-center mb-4">
+        <label class="w-24">Role:</label>
+        <select class="border rounded p-1 w-64">
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
+        </select>
+    </div>
+    
+    <button class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">Create User</button>
+    
+    <table class="border-collapse border w-full mt-8">
+        <thead>
+            <tr class="bg-gray-200">
+                <th class="border p-2">#</th>
+                <th class="border p-2">Username</th>
+                <th class="border p-2">Role</th>
+                <th class="border p-2">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+                <tr class="bg-gray-100">
+                    <td class="border p-2">{{ loop.index }}</td>
+                    <td class="border p-2">{{ user.username }}</td>
+                    <td class="border p-2">{{ user.role }}</td>
+                    <td class="border p-2">
+                        <a href="#" class="text-blue-500 hover:underline edit-btn" data-id="{{ user.id }}">Edit</a>
+                        <a href="{{ url_for('delete_account', id=user.id) }}" class="text-red-500 hover:underline ml-2">Delete</a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+<!-- Edit Account Modal -->
+<div id="editModal" class="hidden fixed inset-0 bg-gray-700 bg-opacity-75 flex items-center justify-center">
+    <div class="bg-white p-6 rounded shadow-lg">
+        <h2 class="text-lg font-semibold mb-4">Edit Account</h2>
+        
+        <form method="post" id="editForm">
+            <input type="hidden" id="editUserId" name="user_id">
+            
+            <div class="flex items-center mb-4">
+                <label class="w-24">Password:</label>
+                <input type="password" id="editPassword" class="border rounded p-1 w-64" placeholder="Enter new password">
+            </div>
+            
+            <div class="flex items-center mb-4">
+                <label class="w-24">Role:</label>
+                <select id="editRole" class="border rounded p-1 w-64">
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            
+            <button class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600" type="submit">Save Changes</button>
+            <button id="closeModal" class="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600 ml-2">Close</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const users = {{ users | tojson }};
+    
+    const editButtons = document.querySelectorAll('.edit-btn');
+    const editModal = document.getElementById('editModal');
+    const closeModal = document.getElementById('closeModal');
+    const editForm = document.getElementById('editForm');
+    const editUserId = document.getElementById('editUserId');
+    const editPassword = document.getElementById('editPassword');
+    const editRole = document.getElementById('editRole');
+    
+    editButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const userId = button.getAttribute('data-id');
+            const user = users.find(u => u.id === parseInt(userId)); // Parse the ID to an integer
+            
+            editUserId.value = userId;
+            editPassword.value = '';
+            editRole.value = user.role;
+            
+            editModal.classList.remove('hidden');
+        });
+    });
+    
+    closeModal.addEventListener('click', () => {
+        editModal.classList.add('hidden');
+    });
+</script>
+{% endblock %}
