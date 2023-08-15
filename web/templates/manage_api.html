@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage API{% endblock %}
+
+{% block content %}
+    <h2 class="text-2xl font-semibold mb-4">API List</h2>
+    
+    <table class="border-collapse border w-full">
+        <thead>
+            <tr class="bg-gray-200">
+                <th class="border p-2">#</th>
+                <th class="border p-2">Name</th>
+                <th class="border p-2">URL</th>
+                <th class="border p-2">Daerah</th>
+                <th class="border p-2">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for api in api_list %}
+                <tr class="bg-gray-100">
+                    <td class="border p-2">{{ loop.index }}</td>
+                    <td class="border p-2">{{ api.name }}</td>
+                    <td class="border p-2">{{ api.url }}</td>
+                    <td class="border p-2">{{ get_daerah_name(api.daerah_id) }}</td>
+                    <td class="border p-2">
+                        <a href="#" class="text-blue-500 hover:underline edit-btn" data-id="{{ api.id }}">Edit</a>
+                        <a href="{{ url_for('delete_api', id=api.id) }}" class="text-red-500 hover:underline ml-2">Delete</a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <!-- Edit API Modal -->
+    <div id="editApiModal" class="hidden fixed inset-0 bg-gray-700 bg-opacity-75 flex items-center justify-center">
+        <div class="bg-white p-6 rounded shadow-lg">
+            <h2 class="text-lg font-semibold mb-4">Edit API</h2>
+            
+            <form method="post" id="editApiForm">
+                <input type="hidden" id="editApiId" name="api_id">
+                
+                <div class="flex items-center mb-4">
+                    <label class="w-24">Name:</label>
+                    <input type="text" id="editApiName" class="border rounded p-1 w-64" placeholder="Enter API name" required>
+                </div>
+                <div class="flex items-center mb-4">
+                    <label class="w-24">URL:</label>
+                    <input type="text" id="editApiUrl" class="border rounded p-1 w-64" placeholder="Enter API URL" required>
+                </div>
+                <div class="flex items-center mb-4">
+                    <label class="w-24">Daerah:</label>
+                    <select id="editApiDaerah" class="border rounded p-1 w-64" required>
+                        {% for daerah in daerah_list %}
+                            <option value="{{ daerah.id }}">{{ daerah.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <button class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600" type="submit">Save Changes</button>
+                <button id="closeApiModal" class="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600 ml-2">Close</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="mt-8">
+        <h2 class="text-2xl font-semibold mb-4">Create New API</h2>
+        
+        <form method="post" action="{{ url_for('create_api') }}" class="space-y-4">
+            <div class="flex items-center mb-4">
+                <label class="w-24">Name:</label>
+                <input type="text" name="name" class="border rounded p-1 w-64" placeholder="Enter API name" required>
+            </div>
+            <div class="flex items-center mb-4">
+                <label class="w-24">URL:</label>
+                <input type="text" name="url" class="border rounded p-1 w-64" placeholder="Enter API URL" required>
+            </div>
+            <div class="flex items-center mb-4">
+                <label class="w-24">Daerah:</label>
+                <select name="daerah_id" class="border rounded p-1 w-64" required>
+                    {% for daerah in daerah_list %}
+                        <option value="{{ daerah.id }}">{{ daerah.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <button class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600" type="submit">Create API</button>
+        </form>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    
+    const apiList = {{ api_list | tojson }};
+    
+    const editApiButtons = document.querySelectorAll('.edit-btn');
+    const editApiModal = document.getElementById('editApiModal');
+    const closeApiModal = document.getElementById('closeApiModal');
+    const editApiForm = document.getElementById('editApiForm');
+    const editApiId = document.getElementById('editApiId');
+    const editApiName = document.getElementById('editApiName');
+    const editApiUrl = document.getElementById('editApiUrl');
+    const editApiDaerah = document.getElementById('editApiDaerah');
+    
+    editApiButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const apiId = button.getAttribute('data-id');
+            const api = apiList.find(a => a.id === parseInt(apiId));
+            
+            editApiId.value = apiId;
+            editApiName.value = api.name;
+            editApiUrl.value = api.url;
+            editApiDaerah.value = api.daerah;
+            
+            editApiModal.classList.remove('hidden');
+        });
+    });
+    
+    closeApiModal.addEventListener('click', () => {
+        editApiModal.classList.add('hidden');
+    });
+
+</script>
+{% endblock %}

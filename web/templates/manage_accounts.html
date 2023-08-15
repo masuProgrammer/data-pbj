@@ -7,23 +7,23 @@
     
     <div class="flex items-center mb-4">
         <label class="w-24">Username:</label>
-        <input type="text" class="border rounded p-1 w-64" placeholder="Enter username">
+        <input type="text" id="createUsername" class="border rounded p-1 w-64" placeholder="Enter username">
     </div>
     
     <div class="flex items-center mb-4">
         <label class="w-24">Password:</label>
-        <input type="password" class="border rounded p-1 w-64" placeholder="Enter password">
+        <input type="password" id="createPassword" class="border rounded p-1 w-64" placeholder="Enter password">
     </div>
     
     <div class="flex items-center mb-4">
         <label class="w-24">Role:</label>
-        <select class="border rounded p-1 w-64">
+        <select id="createRole" class="border rounded p-1 w-64">
             <option value="user">User</option>
             <option value="admin">Admin</option>
         </select>
     </div>
     
-    <button class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">Create User</button>
+    <button id="createUserBtn" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">Create User</button>
     
     <table class="border-collapse border w-full mt-8">
         <thead>
@@ -105,5 +105,46 @@
     closeModal.addEventListener('click', () => {
         editModal.classList.add('hidden');
     });
+
+     // Create User Button Click Event
+const createUserBtn = document.getElementById('createUserBtn');
+createUserBtn.addEventListener('click', () => {
+    const createUsername = document.getElementById('createUsername').value;
+    const createPassword = document.getElementById('createPassword').value;
+    const createRole = document.getElementById('createRole').value;
+
+    // Create a new user object
+    const newUser = {
+        username: createUsername,
+        password: createPassword,
+        role: createRole
+    };
+
+    // Make a POST request to the server to create the new user
+    fetch('/create-account', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newUser)
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Display a success message
+        alert(data.message);
+
+        // Refresh the page to update the user list
+        location.reload();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+    });
+
+    // Clear input fields
+    document.getElementById('createUsername').value = '';
+    document.getElementById('createPassword').value = '';
+    document.getElementById('createRole').value = 'user';
+});
 </script>
 {% endblock %}

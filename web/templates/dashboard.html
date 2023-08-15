@@ -1,28 +1,24 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.0/tailwind.min.css">
-</head>
-<body class="font-roboto">
+{% extends 'base.html' %}
 
-<nav class="bg-gray-800 text-white p-4">
-    <div class="container mx-auto flex justify-between">
-        <span>Welcome, {{ user.username }}!</span>
-        
-        <!-- Display account management link for admin users -->
-        {% if user.role == 'admin' %}
-            <a href="{{ url_for('manage_accounts') }}" class="hover:underline">Manajemen Akun</a>
-        {% endif %}
-    </div>
-</nav>
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
 
 <div class="container mx-auto p-4">
     <!-- Dashboard content here -->
+    <div class="grid grid-cols-3 gap-4">
+        <a href="{{ url_for('manage_daerah') }}" class="bg-blue-500 hover:bg-blue-600 text-white py-4 px-6 rounded-lg shadow-md">
+            <h3 class="text-xl font-semibold mb-2">Manajemen Daerah</h3>
+            <p class="text-gray-200">Kelola data daerah.</p>
+        </a>
+        <a href="{{ url_for('manage_accounts') }}" class="bg-green-500 hover:bg-blue-600 text-white py-4 px-6 rounded-lg shadow-md">
+            <h3 class="text-xl font-semibold mb-2">Manajemen Akun</h3>
+            <p class="text-gray-200">Kelola data akun.</p>
+        </a>
+        <a href="{{ url_for('manage_api') }}" class="bg-yellow-500 hover:bg-yellow-600 text-white py-4 px-6 rounded-lg shadow-md">
+            <h3 class="text-xl font-semibold mb-2">Manajemen API</h3>
+            <p class="text-gray-200">Kelola data API.</p>
+        </a>
+    </div>
 </div>
-
-</body>
-</html>
+{% endblock %}
