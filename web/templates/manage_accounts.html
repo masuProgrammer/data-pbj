@@ -23,6 +23,15 @@
         </select>
     </div>
     
+    <div class="flex items-center mb-4">
+        <label class="w-24">Daerah:</label>
+        <select id="createDaerah" class="border rounded p-1 w-64">
+            {% for daerah in daerah_list %}
+                <option value="{{ daerah.id }}">{{ daerah.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
     <button id="createUserBtn" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">Create User</button>
     
     <table class="border-collapse border w-full mt-8">
@@ -31,6 +40,7 @@
                 <th class="border p-2">#</th>
                 <th class="border p-2">Username</th>
                 <th class="border p-2">Role</th>
+                <th class="border p-2">Daerah</th>
                 <th class="border p-2">Actions</th>
             </tr>
         </thead>
@@ -40,6 +50,7 @@
                     <td class="border p-2">{{ loop.index }}</td>
                     <td class="border p-2">{{ user.username }}</td>
                     <td class="border p-2">{{ user.role }}</td>
+                    <td class="border p-2">{{ get_daerah_name(user.daerah_id) }}</td>
                     <td class="border p-2">
                         <a href="#" class="text-blue-500 hover:underline edit-btn" data-id="{{ user.id }}">Edit</a>
                         <a href="{{ url_for('delete_account', id=user.id) }}" class="text-red-500 hover:underline ml-2">Delete</a>
@@ -80,6 +91,7 @@
 {% block scripts %}
 <script>
     const users = {{ users | tojson }};
+    const daerahList = {{ daerah_list | tojson }};
     
     const editButtons = document.querySelectorAll('.edit-btn');
     const editModal = document.getElementById('editModal');
@@ -88,6 +100,7 @@
     const editUserId = document.getElementById('editUserId');
     const editPassword = document.getElementById('editPassword');
     const editRole = document.getElementById('editRole');
+    const createDaerah = document.getElementById('createDaerah');
     
     editButtons.forEach(button => {
         button.addEventListener('click', () => {
@@ -106,45 +119,48 @@
         editModal.classList.add('hidden');
     });
 
-     // Create User Button Click Event
-const createUserBtn = document.getElementById('createUserBtn');
-createUserBtn.addEventListener('click', () => {
-    const createUsername = document.getElementById('createUsername').value;
-    const createPassword = document.getElementById('createPassword').value;
-    const createRole = document.getElementById('createRole').value;
+      // Create User Button Click Event
+    const createUserBtn = document.getElementById('createUserBtn');
+    createUserBtn.addEventListener('click', () => {
+        const createUsername = document.getElementById('createUsername').value;
+        const createPassword = document.getElementById('createPassword').value;
+        const createRole = document.getElementById('createRole').value;
+        const selectedDaerahId = createDaerah.value;
+        
+        // Create a new user object
+        const newUser = {
+            username: createUsername,
+            password: createPassword,
+            role: createRole,
+            daerah_id: selectedDaerahId  // Include daerah_id in the user object
+        };
 
-    // Create a new user object
-    const newUser = {
-        username: createUsername,
-        password: createPassword,
-        role: createRole
-    };
+        // Make a POST request to the server to create the new user
+        fetch('/create-account', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(newUser)
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Display a success message
+            alert(data.message);
 
-    // Make a POST request to the server to create the new user
-    fetch('/create-account', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(newUser)
-    })
-    .then(response => response.json())
-    .then(data => {
-        // Display a success message
-        alert(data.message);
+            // Refresh the page to update the user list
+            location.reload();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred. Please try again.');
+        });
 
-        // Refresh the page to update the user list
-        location.reload();
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('An error occurred. Please try again.');
+        // Clear input fields
+        document.getElementById('createUsername').value = '';
+        document.getElementById('createPassword').value = '';
+        document.getElementById('createRole').value = 'user';
+        createDaerah.value = '';  // Clear the selected daerah
     });
-
-    // Clear input fields
-    document.getElementById('createUsername').value = '';
-    document.getElementById('createPassword').value = '';
-    document.getElementById('createRole').value = 'user';
-});
 </script>
 {% endblock %}

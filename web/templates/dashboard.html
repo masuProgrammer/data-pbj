@@ -6,6 +6,7 @@
 
 <div class="container mx-auto p-4">
     <!-- Dashboard content here -->
+    {% if user.role == 'admin' %}
     <div class="grid grid-cols-3 gap-4">
         <a href="{{ url_for('manage_daerah') }}" class="bg-blue-500 hover:bg-blue-600 text-white py-4 px-6 rounded-lg shadow-md">
             <h3 class="text-xl font-semibold mb-2">Manajemen Daerah</h3>
@@ -20,5 +21,35 @@
             <p class="text-gray-200">Kelola data API.</p>
         </a>
     </div>
+    {% else %}
+    <!-- Table displaying user's APIs based on daerah -->
+    <h2 class="text-2xl font-semibold my-4">Daftar API Daerah {{ user.daerah.name }}</h2>
+    <table class="border-collapse border w-full">
+        <thead>
+            <tr class="bg-gray-200">
+                <th class="border p-2">#</th>
+                <th class="border p-2">Nama API</th>
+                <th class="border p-2">Download</th>
+                <th class="border p-2">Tanggal Pembaruan</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for api in api_list %}
+            <tr class="bg-gray-100">
+                <td class="border p-2">{{ loop.index }}</td>
+                <td class="border p-2">{{ api.name }}</td>
+                <td class="border p-2">
+                    <a style="color: blue;" href="{{ url_for('download_api', daerah=user.daerah.name, api_name=api.name, format='json') }}">JSON</a>
+                    <a style="color: green;" href="{{ url_for('download_api', daerah=user.daerah.name, api_name=api.name, format='excel') }}">Excel</a>
+                </td>
+                <td class="border p-2">
+                    {% set updated_at_local = api.updated_at + timedelta(hours=7) %}
+                    {{ updated_at_local.strftime('Tanggal %d/%m/%Y, Pukul %H:%M:%S') }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
 </div>
 {% endblock %}

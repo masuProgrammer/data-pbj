@@ -1,10 +1,13 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, send_file
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash  # Import the function
 from apscheduler.schedulers.background import BackgroundScheduler
 import os
 import json
 import requests
+from datetime import datetime,timedelta
+from pytz import timezone
+from openpyxl import Workbook
 
 # Create a Flask app
 app = Flask(__name__)
@@ -26,7 +29,10 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
-    role = db.Column(db.String(20), nullable=False, default='user')  # Add the role column
+    role = db.Column(db.String(20), nullable=False, default='user')
+    daerah_id = db.Column(db.Integer, db.ForeignKey('daerah.id'))  # Add the foreign key
+
+    daerah = db.relationship('Daerah', backref='users')  # Establish the relationship
 
 class Daerah(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -37,7 +43,7 @@ class Api(db.Model):
     name = db.Column(db.String(100), unique=True, nullable=False)
     url = db.Column(db.String(200), nullable=False)
     daerah_id = db.Column(db.Integer, db.ForeignKey('daerah.id'))  # Add the foreign key
-
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     daerah = db.relationship('Daerah', backref='apis')  # Establish the relationship
 
 
@@ -93,7 +99,17 @@ def login():
 def dashboard():
     if 'user_id' in session:
         user = User.query.get(session['user_id'])
-        return render_template('dashboard.html', user=user)  # Pass the user object to the template
+
+        if user.role != 'admin':
+            api_list = user.daerah.apis
+            
+            # Convert updated_at to Asia/Jakarta timezone
+            for api in api_list:
+                api.updated_at = api.updated_at.astimezone(timezone('Asia/Jakarta'))
+
+            return render_template('dashboard.html', user=user, api_list=api_list, timedelta=timedelta)
+        
+        return render_template('dashboard.html', user=user)
     else:
         return redirect(url_for('login'))
 
@@ -163,14 +179,19 @@ def manage_accounts():
         user = User.query.get(session['user_id'])
         if user.role == 'admin':
             users = User.query.all()  # Get all users
-            users_json = [{'id': user.id,'username': user.username, 'role': user.role} for user in users]
-            return render_template('manage_accounts.html', user=user, users=users_json)  # Pass the user and users to the template
+            users_json = [{'id': user.id, 'username': user.username, 'role': user.role, 'daerah_id': user.daerah_id} for user in users]
+            daerah_objects = Daerah.query.all()  # Get all daerah as objects
+            daerah_list = [{'id': daerah.id, 'name': daerah.name} for daerah in daerah_objects]  # Serialize daerah objects
+            def get_daerah_name(daerah_id):
+                daerah = next((item for item in daerah_list if item["id"] == daerah_id), None)
+                return daerah["name"] if daerah else 'Unknown Daerah'
+            return render_template('manage_accounts.html', user=user, users=users_json,daerah_list=daerah_list,get_daerah_name=get_daerah_name)  # Pass the user and users to the template
         else:
             flash('You do not have permission to access this page.', 'danger')
             return redirect(url_for('dashboard'))
     else:
         return redirect(url_for('login'))
-    
+
 @app.route('/create-account', methods=['POST'])
 def create_account():
     if request.method == 'POST':
@@ -178,16 +199,16 @@ def create_account():
         username = data.get('username')
         password = data.get('password')
         role = data.get('role')
-        
+        daerah_id = data.get('daerah_id')  # Get daerah_id from the JSON data
+
         hashed_password = generate_password_hash(password)  # Hash the password
-        
-        new_user = User(username=username, password=hashed_password, role=role)
+
+        new_user = User(username=username, password=hashed_password, role=role, daerah_id=daerah_id)  # Include daerah_id
         db.session.add(new_user)
         db.session.commit()
-        
+
         response_data = {'message': 'User account created successfully.'}
         return jsonify(response_data)
-
 
 # Define a route to edit an account
 @app.route('/edit-account/<int:id>', methods=['GET', 'POST'])
@@ -195,6 +216,7 @@ def edit_account(id):
     user = User.query.get(id)
     if request.method == 'POST':
         # Update user data here based on the form data
+        # Include updating daerah_id if needed
         # Redirect back to the manage accounts page
         return redirect(url_for('manage_accounts'))
     return render_template('edit_account.html', user=user)
@@ -255,15 +277,37 @@ def create_daerah():
 
         return redirect(url_for('index'))
     
+@app.route('/download/<string:daerah>/<string:api_name>/<string:format>')
+def download_api(daerah, api_name,format):
+    folder_path = os.path.join('download', daerah, api_name)
+    file_path_json = os.path.join(folder_path, 'data.json')
+    file_path_excel = os.path.join(folder_path, 'data.xlsx')
+
+    # Check if the JSON file exists
+    if format == 'json':
+        return send_file(file_path_json, as_attachment=True)
+    
+    # Check if the Excel file exists
+    elif format == 'excel':
+        return send_file(file_path_excel, as_attachment=True)
+    
+    else:
+        return "File not found"
+    
+# Definisi rute logout
+@app.route('/logout')
+def logout():
+    session.clear()  # Menghapus data sesi
+    return redirect(url_for('login'))  # Mengarahkan kembali ke halaman login
+    
 
 # Inisialisasi scheduler
 scheduler = BackgroundScheduler()
 def tarik_data():
-    # Query semua objek API
-    api_objects = Api.query.all()
+    # Query API dengan updated_at terlama
+    api = Api.query.order_by(Api.updated_at).first()
 
-    # Lakukan tugas-tugas berulang di sini
-    for api in api_objects:
+    if api is not None:
         daerah_name = Daerah.query.get(api.daerah_id).name
         api_name = api.name
         api_url = api.url
@@ -282,12 +326,34 @@ def tarik_data():
             with open(file_path, 'w') as file:
                 json.dump(data, file)
             
+            # Update updated_at
+            api.updated_at = datetime.utcnow()
+            db.session.commit()
+            
             print(f"Data from {api_name} in {daerah_name} saved to {file_path}")
+            
+            # Buat file Excel
+            excel_file_path = os.path.join(folder_path, 'data.xlsx')
+            workbook = Workbook()
+            sheet = workbook.active
+            sheet.title = 'Data'
+            
+            # Tulis data ke file Excel
+            for row_index, item in enumerate(data, start=1):
+                col_index = 1
+                for value in item.values():
+                    sheet.cell(row=row_index, column=col_index, value=value)
+                    col_index += 1
+            
+            workbook.save(excel_file_path)
+            print(f"Data from {api_name} in {daerah_name} saved to {excel_file_path}")
+            
         else:
             print(f"Failed to fetch data from {api_name} in {daerah_name}")
+    else:
+        print("No APIs found")
 
-# Atur jadwal cron job (contoh: setiap hari jam 10:30)
-scheduler.add_job(tarik_data, 'cron', hour=10, minute=30)
+scheduler.add_job(tarik_data, 'interval', minutes=1)
 
 # Jalankan scheduler
 scheduler.start()
