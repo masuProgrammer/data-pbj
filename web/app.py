@@ -221,6 +221,29 @@ def edit_account(id):
         return redirect(url_for('manage_accounts'))
     return render_template('edit_account.html', user=user)
 
+# Define the route to handle account editing
+@app.route('/edit-account', methods=['POST'])
+def edit_account():
+    user_id = request.form.get('user_id')
+    new_password = request.form.get('password')
+    new_role = request.form.get('role')
+
+    # Get the user by ID
+    user = User.query.get(user_id)
+
+    if user:
+        # Update password and role
+        if new_password:
+            user.set_password(new_password)  # Assuming you have a set_password method in your User model
+        user.role = new_role
+
+        # Save changes to the database
+        db.session.commit()
+
+        return jsonify({'message': 'Account updated successfully'})
+    else:
+        return jsonify({'message': 'User not found'}), 404
+
 # Define a route to delete an account
 @app.route('/delete-account/<int:id>')
 def delete_account(id):
@@ -304,54 +327,54 @@ def logout():
 # Inisialisasi scheduler
 scheduler = BackgroundScheduler()
 def tarik_data():
-    # Query API dengan updated_at terlama
-    api = Api.query.order_by(Api.updated_at).first()
+    with app.app_context():
+        # Query API dengan updated_at terlama
+        api = Api.query.order_by(Api.updated_at).first()
+         # Update updated_at
+        api.updated_at = datetime.utcnow()
+        db.session.commit()
 
-    if api is not None:
-        daerah_name = Daerah.query.get(api.daerah_id).name
-        api_name = api.name
-        api_url = api.url
-        
-        # Lakukan permintaan HTTP untuk mengambil data dari URL API
-        response = requests.get(api_url)
-        if response.status_code == 200:
-            data = response.json()
+        if api is not None:
+            daerah_name = Daerah.query.get(api.daerah_id).name
+            api_name = api.name
+            api_url = api.url
             
-            # Buat struktur folder jika belum ada
-            folder_path = os.path.join('download', daerah_name, api_name)
-            os.makedirs(folder_path, exist_ok=True)
-            
-            # Simpan data ke dalam file JSON
-            file_path = os.path.join(folder_path, 'data.json')
-            with open(file_path, 'w') as file:
-                json.dump(data, file)
-            
-            # Update updated_at
-            api.updated_at = datetime.utcnow()
-            db.session.commit()
-            
-            print(f"Data from {api_name} in {daerah_name} saved to {file_path}")
-            
-            # Buat file Excel
-            excel_file_path = os.path.join(folder_path, 'data.xlsx')
-            workbook = Workbook()
-            sheet = workbook.active
-            sheet.title = 'Data'
-            
-            # Tulis data ke file Excel
-            for row_index, item in enumerate(data, start=1):
-                col_index = 1
-                for value in item.values():
-                    sheet.cell(row=row_index, column=col_index, value=value)
-                    col_index += 1
-            
-            workbook.save(excel_file_path)
-            print(f"Data from {api_name} in {daerah_name} saved to {excel_file_path}")
-            
+            # Lakukan permintaan HTTP untuk mengambil data dari URL API
+            response = requests.get(api_url)
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Buat struktur folder jika belum ada
+                folder_path = os.path.join('download', daerah_name, api_name)
+                os.makedirs(folder_path, exist_ok=True)
+                
+                # Simpan data ke dalam file JSON
+                file_path = os.path.join(folder_path, 'data.json')
+                with open(file_path, 'w') as file:
+                    json.dump(data, file)
+                
+                print(f"Data from {api_name} in {daerah_name} saved to {file_path}")
+                
+                # Buat file Excel
+                excel_file_path = os.path.join(folder_path, 'data.xlsx')
+                workbook = Workbook()
+                sheet = workbook.active
+                sheet.title = 'Data'
+                
+                # Tulis data ke file Excel
+                for row_index, item in enumerate(data, start=1):
+                    col_index = 1
+                    for value in item.values():
+                        sheet.cell(row=row_index, column=col_index, value=value)
+                        col_index += 1
+                
+                workbook.save(excel_file_path)
+                print(f"Data from {api_name} in {daerah_name} saved to {excel_file_path}")
+                
+            else:
+                print(f"Failed to fetch data from {api_name} in {daerah_name}")
         else:
-            print(f"Failed to fetch data from {api_name} in {daerah_name}")
-    else:
-        print("No APIs found")
+            print("No APIs found")
 
 scheduler.add_job(tarik_data, 'interval', minutes=1)
 
